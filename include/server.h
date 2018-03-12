@@ -8,7 +8,7 @@
 
 namespace http {
     class Server {
-        using HttpRequestHandler = std::function<void (Request * req, Response * res)>;
+        using HttpRequestHandler = std::function<void (Request & req, Response & res)>;
 
         uv_loop_t * loop;
         uv_tcp_t tcp;

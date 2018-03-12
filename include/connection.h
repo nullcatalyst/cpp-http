@@ -1,18 +1,18 @@
 #pragma once
 
-#include <string>
 #include <unordered_map>
+#include "./unicode-string.h"
 
 namespace http {
     class Connection {
     protected:
-        std::unordered_map<std::string, std::string> headers;
+        std::unordered_map<icu::UnicodeString, icu::UnicodeString> headers;
 
         Connection() = default;
 
     public:
-        std::string getHeader(const std::string & key);
-        void addHeader(const std::string & key, const std::string & value);
-        void removeHeader(const std::string & key);
+        icu::UnicodeString getHeader(const icu::UnicodeString & key);
+        void addHeader(const icu::UnicodeString & key, const icu::UnicodeString & value);
+        void removeHeader(const icu::UnicodeString & key);
     };
 }

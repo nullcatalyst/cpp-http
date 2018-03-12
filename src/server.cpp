@@ -11,10 +11,11 @@ namespace {
 
     struct Client {
         uv_tcp_t tcp;
+        http::Server * server;
         http::Request req;
         http::Response res;
 
-        Client(uv_loop_t * loop) {
+        Client(uv_loop_t * loop, http::Server * server) : server(server) {
             if (uv_tcp_init(loop, &tcp)) {
                 // Error
             }
@@ -38,6 +39,7 @@ namespace http {
             // Error
             return;
         }
+        tcp.data = this;
 
         struct sockaddr_in address;
         if (uv_ip4_addr(Host, port, &address)) {
@@ -68,7 +70,7 @@ namespace http {
             return;
         }
 
-        Client * client = new Client(server->loop);
+        Client * client = new Client(server->loop, (Server *) server->data);
         uv_stream_t * stream = (uv_stream_t *) &client->tcp;
 
         if (uv_accept(server, stream)) {
@@ -104,7 +106,7 @@ namespace http {
         if (nread >= 0) {
             Client * client = (Client *) handle->data;
             if (client->req.parse(buffer, nread)) {
-                httpRequestHandler(&client->req, &client->res);
+                client->server->httpRequestHandler(client->req, client->res);
             }
         } else {
             if (nread == UV_EOF) {

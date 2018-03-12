@@ -13,7 +13,7 @@ namespace {
             http::Request * req = (http::Request *) parser->data;
 
             if (at != nullptr && req != nullptr) {
-                req->setUrl(std::string(at, len));
+                req->setUrl(http::convertRawToUnicode(at, len));
             }
 
             return 0;
@@ -31,7 +31,10 @@ namespace {
             http::Request * req = (http::Request *) parser->data;
 
             http_parser_state * state = (http_parser_state *) parser;
-            req->addHeader(std::string(state->header_field_at, state->header_field_length), std::string(at, length));
+            req->addHeader(
+                http::convertRawToUnicode(state->header_field_at, state->header_field_length).toLower(),
+                http::convertRawToUnicode(at, length)
+                );
 
             return 0;
         },
@@ -57,7 +60,7 @@ namespace {
             http::Request * req = (http::Request *) parser->data;
 
             if (at != nullptr && req != nullptr && (int) len > -1) {
-                req->setBody(std::string(at, len));
+                req->setBody(http::convertRawToUnicode(at, len));
             }
 
             return 0;
@@ -83,9 +86,9 @@ namespace http {
         }
 
         printf("METHOD: %d\n", method);
-        printf("URL: %s\n", url.c_str());
+        printf("URL: %s\n", convertUnicodeToString(url).c_str());
         for (auto & it : headers) {
-            printf("HEADER: %s=%s\n", it.first.c_str(), it.second.c_str());
+            printf("HEADER: %s=%s\n", convertUnicodeToString(it.first).c_str(), convertUnicodeToString(it.second).c_str());
         }
 
         return true;

@@ -1,20 +1,20 @@
 #include "connection.h"
 
 namespace http {
-    std::string Connection::getHeader(const std::string & key) {
+    icu::UnicodeString Connection::getHeader(const icu::UnicodeString & key) {
         auto it = headers.find(key);
         if (it != headers.end()) {
             return it->second;
         } else {
-            return std::string();
+            return icu::UnicodeString();
         }
     }
 
-    void Connection::addHeader(const std::string & key, const std::string & value) {
+    void Connection::addHeader(const icu::UnicodeString & key, const icu::UnicodeString & value) {
         headers.emplace(key, value);
     }
 
-    void Connection::removeHeader(const std::string & key) {
+    void Connection::removeHeader(const icu::UnicodeString & key) {
         auto it = headers.find(key);
         if (it != headers.end()) {
             headers.erase(it);

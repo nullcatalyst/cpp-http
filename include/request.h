@@ -8,8 +8,8 @@
 namespace http {
     class Request : public Connection {
         Method method;
-        std::string url;
-        std::string body;
+        icu::UnicodeString url;
+        icu::UnicodeString body;
 
     public:
         Request() = default;
@@ -17,11 +17,11 @@ namespace http {
         Method getMethod() const { return method; }
         void setMethod(Method method) { this->method = method; }
 
-        const std::string & getUrl() const { return url; }
-        void setUrl(const std::string & url) { this->url = url; }
+        const icu::UnicodeString & getUrl() const { return url; }
+        void setUrl(const icu::UnicodeString & url) { this->url = url; }
 
-        const std::string & getBody() const { return body; }
-        void setBody(const std::string & body) { this->body = body; }
+        const icu::UnicodeString & getBody() const { return body; }
+        void setBody(const icu::UnicodeString & body) { this->body = body; }
 
         bool parse(const uv_buf_t * buffer, ssize_t nread);
     };
