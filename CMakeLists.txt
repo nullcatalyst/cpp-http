@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(http)
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(ICU COMPONENTS uc REQUIRED)
+find_package(ICU COMPONENTS uc io REQUIRED)
 
 add_library(http "")
 
@@ -28,4 +28,5 @@ target_link_libraries(http
 PUBLIC
     uv
     ICU::uc
+    ICU::io
 )

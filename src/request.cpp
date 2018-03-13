@@ -51,7 +51,6 @@ namespace {
                 case HTTP_PUT:          method = http::Method::Put;     break;
                 default:                method = http::Method::Unknown; break;
             }
-            printf("raw method: %u\n", parser->method);
 
             return 0;
         },
@@ -83,12 +82,6 @@ namespace http {
         ssize_t parsed = (ssize_t) http_parser_execute(&parser, &settings, buffer->base, nread);
         if (parsed < nread) {
             return false;
-        }
-
-        printf("METHOD: %d\n", method);
-        printf("URL: %s\n", convertUnicodeToString(url).c_str());
-        for (auto & it : headers) {
-            printf("HEADER: %s=%s\n", convertUnicodeToString(it.first).c_str(), convertUnicodeToString(it.second).c_str());
         }
 
         return true;

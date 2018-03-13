@@ -1,6 +1,8 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
+#include <condition_variable>
 #include <uv.h>
 
 #include "./request.h"
@@ -9,11 +11,19 @@
 namespace http {
     class Server {
         using HttpRequestHandler = std::function<void (Request & req, Response & res)>;
+        using CloseHandler = std::function<void (Server & server)>;
+
 
         uv_loop_t * loop;
         uv_tcp_t tcp;
         uint16_t port;
+
+        std::atomic<bool> running;
+        std::mutex mutex;
+        std::condition_variable cv;
+
         HttpRequestHandler httpRequestHandler;
+
 
         static void onConnection(uv_stream_t * server, int status);
         static void onShutdown(uv_shutdown_t * shutdownReq, int status);
@@ -30,6 +40,12 @@ namespace http {
 
         void onHttpRequest(const HttpRequestHandler & httpRequestHandler) { this->httpRequestHandler = httpRequestHandler; }
 
-        void listen(uint16_t port);
+        bool listen(uint16_t port);
+        void run();
+
+        /**
+         * This function blocks until the server has stopped.
+         */
+        void close();
     };
 }

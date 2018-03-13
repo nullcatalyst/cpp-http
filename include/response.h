@@ -1,17 +1,14 @@
 #pragma once
 
-#include <string>
-#include <sstream>
-#include <unordered_map>
 #include <uv.h>
 
-#include "./method.h"
 #include "./status.h"
+#include "./connection.h"
 
 namespace http {
-    class Response {
+    class Response : public Connection {
         Status status;
-        std::stringstream body;
+        icu::UnicodeString body;
 
     public:
         Response() = default;
@@ -19,6 +16,10 @@ namespace http {
         Status getStatus() const { return status; }
         void setStatus(Status status) { this->status = status; }
 
-        uv_buf_t * end();
+        const icu::UnicodeString & getBody() const { return body; }
+        void setBody(const icu::UnicodeString & body) { this->body = body; }
+
+        void write(const icu::UnicodeString & content) { this->body += content; }
+        uv_buf_t end();
     };
 }

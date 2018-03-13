@@ -11,11 +11,12 @@ namespace {
 
     struct Client {
         uv_tcp_t tcp;
+        uv_write_t write;
         http::Server * server;
         http::Request req;
         http::Response res;
 
-        Client(uv_loop_t * loop, http::Server * server) : server(server) {
+        Client(uv_loop_t * loop, http::Server * server) : write{0}, server(server) {
             if (uv_tcp_init(loop, &tcp)) {
                 // Error
             }
@@ -30,36 +31,50 @@ namespace http {
 
     Server::Server(uv_loop_t * loop) : loop(loop) {}
 
-    Server::~Server() {
+    Server::~Server() {}
 
-    }
-
-    void Server::listen(uint16_t port) {
+    bool Server::listen(uint16_t port) {
         if (uv_tcp_init(loop, &tcp)) {
             // Error
-            return;
+            return false;
         }
         tcp.data = this;
 
         struct sockaddr_in address;
         if (uv_ip4_addr(Host, port, &address)) {
             // Error
-            return;
+            return false;
         }
+        this->port = address.sin_port;
 
         if (uv_tcp_bind(&tcp, (struct sockaddr *) &address, 0)) {
             // Error
-            return;
+            return false;
         }
 
         if (uv_listen((uv_stream_t *) &tcp, Backlog, onConnection)) {
             // Error
-            return;
+            return false;
         }
 
+        return true;
+    }
+
+    void Server::run() {
         if (uv_run(loop, UV_RUN_DEFAULT)) {
             // Error
-            return;
+        }
+
+        running = false;
+        cv.notify_all();
+    }
+
+    void Server::close() {
+        if (running) {
+            uv_stop(loop);
+
+            std::unique_lock<std::mutex> lock(mutex);
+            cv.wait(lock, [this] { return !running; });
         }
     }
 
@@ -107,16 +122,20 @@ namespace http {
             Client * client = (Client *) handle->data;
             if (client->req.parse(buffer, nread)) {
                 client->server->httpRequestHandler(client->req, client->res);
+
+                uv_buf_t resBuffer = client->res.end();
+                client->write.data = resBuffer.base;
+                uv_write(&client->write, handle, &resBuffer, 1, onWrite);
             }
         } else {
             if (nread == UV_EOF) {
                 // do nothing
             } else {
-                // LOGF("read: %s\n", uv_strerror(nread));
+                // printf("read: %s\n", uv_strerror(nread));
             }
 
-            uv_shutdown_t * shutdown_req = (uv_shutdown_t *) malloc(sizeof(uv_shutdown_t));
-            if (uv_shutdown(shutdown_req, handle, onShutdown)) {
+            uv_shutdown_t * shutdownReq = (uv_shutdown_t *) malloc(sizeof(uv_shutdown_t));
+            if (uv_shutdown(shutdownReq, handle, onShutdown)) {
                 // Error
             }
         }
@@ -127,6 +146,6 @@ namespace http {
 
     void Server::onWrite(uv_write_t * writeReq, int status) {
         uv_close((uv_handle_t *) writeReq->handle, onClose);
-        free(writeReq);
+        free(writeReq->data);
     }
 }
