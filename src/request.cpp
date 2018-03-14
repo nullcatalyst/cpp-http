@@ -1,5 +1,8 @@
 #include "request.h"
 
+#include <sstream>
+#include <unicode/ustream.h>
+
 #include "./http-parser/http_parser.h"
 
 namespace {
@@ -40,8 +43,6 @@ namespace {
         },
 
         .on_headers_complete = [] (http_parser * parser) -> int {
-            http::Request * req = (http::Request *) parser->data;
-
             http::Method method;
             switch ((enum http_method) parser->method) {
                 case HTTP_DELETE:       method = http::Method::Delete;  break;
@@ -71,7 +72,11 @@ namespace {
     };
 }
 
+
+
 namespace http {
+    Request::Request() : method(Method::Get), url("/") {}
+
     bool Request::parse(const uv_buf_t * buffer, ssize_t nread) {
         http_parser_state parser;
         http_parser_init(&parser, HTTP_REQUEST);
@@ -85,5 +90,29 @@ namespace http {
         }
 
         return true;
+    }
+
+    uv_buf_t Request::end() const {
+        std::stringstream sstream;
+
+        sstream << getMethodString(method) << " " << url << " HTTP/1.1\r\n";
+
+        for (auto it : headers) {
+            sstream << it.first << ": " << it.second << "\r\n";
+        }
+
+        sstream << "\r\n";
+        sstream << body;
+
+        std::string full = sstream.str();
+        size_t length = full.length();
+
+        uv_buf_t buffer = {
+            .base = (char *) malloc(length * sizeof(char)),
+            .len = length,
+        };
+        memcpy(buffer.base, full.c_str(), length);
+
+        return buffer;
     }
 }

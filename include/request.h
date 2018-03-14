@@ -12,7 +12,7 @@ namespace http {
         icu::UnicodeString body;
 
     public:
-        Request() = default;
+        Request();
 
         Method getMethod() const { return method; }
         void setMethod(Method method) { this->method = method; }
@@ -22,7 +22,16 @@ namespace http {
 
         const icu::UnicodeString & getBody() const { return body; }
         void setBody(const icu::UnicodeString & body) { this->body = body; }
+        void write(const icu::UnicodeString & content) { this->body += content; }
 
+        /**
+         * Parse the buffer representing an HTTP request.
+         */
         bool parse(const uv_buf_t * buffer, ssize_t nread);
+
+        /**
+         * The caller is responsible for freeing the returned buffer.
+         */
+        uv_buf_t end() const;
     };
 }

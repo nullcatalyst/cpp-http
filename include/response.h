@@ -18,8 +18,16 @@ namespace http {
 
         const icu::UnicodeString & getBody() const { return body; }
         void setBody(const icu::UnicodeString & body) { this->body = body; }
-
         void write(const icu::UnicodeString & content) { this->body += content; }
-        uv_buf_t end();
+
+        /**
+         * Parse the buffer representing an HTTP response.
+         */
+        bool parse(const uv_buf_t * buffer, ssize_t nread);
+
+        /**
+         * The caller is responsible for freeing the returned buffer.
+         */
+        uv_buf_t end() const;
     };
 }

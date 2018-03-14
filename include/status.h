@@ -3,7 +3,6 @@
 #include <cstdint> // uint32_t
 
 namespace http {
-
 #define HTTP_STATUS_MAP(XX)                                                     \
     XX(0,   Unknown,                        Unknown)                            \
     XX(100, Continue,                       Continue)                           \
@@ -59,7 +58,7 @@ namespace http {
 #undef XX
     };
 
-    inline const char * getStatusMessage(Status status) {
+    inline const char * getStatusString(Status status) {
         switch (status) {
 #define XX(num, name, string) case Status:: name : return #string ;
             HTTP_STATUS_MAP(XX)
@@ -67,4 +66,6 @@ namespace http {
             default: return "";
         }
     }
+
+#undef HTTP_STATUS_MAP
 }
