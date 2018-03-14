@@ -3,10 +3,10 @@
 #include <uv.h>
 
 #include "./method.h"
-#include "./connection.h"
+#include "./message.h"
 
 namespace http {
-    class Request : public Connection {
+    class Request : public Message {
         Method method;
         icu::UnicodeString url;
         icu::UnicodeString body;

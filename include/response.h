@@ -3,10 +3,10 @@
 #include <uv.h>
 
 #include "./status.h"
-#include "./connection.h"
+#include "./message.h"
 
 namespace http {
-    class Response : public Connection {
+    class Response : public Message {
         Status status;
         icu::UnicodeString body;
 

@@ -5,11 +5,11 @@
 #include "./unicode-string.h"
 
 namespace http {
-    class Connection {
+    class Message {
     protected:
         std::unordered_map<icu::UnicodeString, icu::UnicodeString> headers;
 
-        Connection() = default;
+        Message() = default;
 
     public:
         icu::UnicodeString getHeader(const icu::UnicodeString & key);

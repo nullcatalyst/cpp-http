@@ -16,7 +16,8 @@ PRIVATE
 
 target_sources(http
 PRIVATE
-    src/connection.cpp
+    src/address.cpp
+    src/message.cpp
     src/request.cpp
     src/response.cpp
     src/server.cpp

@@ -6,16 +6,18 @@
 #include "response.h"
 
 namespace {
-    // struct Address : public uv_getaddrinfo_t {
-    //     // http::Server::AddressHandler callback;
-    // };
+    struct DNSLookup {
+        uv_getaddrinfo_t getaddrinfo;
+        http::Server * server;
+        http::Address address;
+        http::Server::AddressHandler callback;
 
-    // void onAddress(uv_getaddrinfo_t * _address, int status, struct addrinfo * res) {
-    //     Address * address = (Address *) _address;
-    //     printf("onAddress:%p\n", _address);
-    // }
+        DNSLookup(http::Server * server, const http::Server::AddressHandler & callback) : server(server), callback(callback) {
+            getaddrinfo.data = this;
+        }
+    };
 
-    struct Client {
+    struct Connection {
         uv_tcp_t tcp;
 
         union {
@@ -29,7 +31,7 @@ namespace {
         http::Response res;
         http::Server::HttpResponseHandler callback;
 
-        Client(uv_loop_t * loop, http::Server * server) : write{0}, server(server) {
+        Connection(uv_loop_t * loop, http::Server * server) : write{0}, server(server) {
             if (uv_tcp_init(loop, &tcp)) {
                 // Error
             }
@@ -48,34 +50,27 @@ namespace http {
 
     Server::~Server() {}
 
-    // void Server::getAddress(const std::string & name, const AddressHandler & callback) {
-    //     struct addrinfo hints;
-    //     hints.ai_family = PF_INET;
-    //     hints.ai_socktype = SOCK_STREAM;
-    //     hints.ai_protocol = IPPROTO_TCP;
-    //     hints.ai_flags = 0;
+    void Server::makeDNSLookup(const std::string & name, const AddressHandler & callback) {
+        struct addrinfo hints;
+        hints.ai_family = PF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+        hints.ai_flags = 0;
 
-    //     Address * address = new Address();
-    //     // address.callback = callback;
-
-    //     printf("getAddress:%p\n", address);
-    //     if (uv_getaddrinfo(loop, address, onAddress, name.c_str(), nullptr, &hints)) {
-    //         // Error
-    //     }
-    // }
-
-    void Server::makeRequest(sockaddr * address, const Request & req, const HttpResponseHandler & callback) {
-        Client * client = new Client(loop, this);
-        client->req = req;
-        client->callback = callback;
-
-        if (uv_ip4_addr("172.217.4.206", 80, (sockaddr_in *) address)) {
+        DNSLookup * dns = new DNSLookup(this, callback);
+        if (uv_getaddrinfo(loop, &dns->getaddrinfo, Server::onAddress, name.c_str(), nullptr, &hints)) {
             // Error
-            return;
         }
+    }
 
-        client->connect.data = client;
-        if (uv_tcp_connect(&client->connect, &client->tcp, address, Server::onConnect)) {
+    void Server::makeRequest(const Address & address, const Request & req, const HttpResponseHandler & callback) {
+        Connection * conn = new Connection(loop, this);
+        conn->req = req;
+        conn->callback = callback;
+
+        conn->connect.data = conn;
+
+        if (uv_tcp_connect(&conn->connect, &conn->tcp, (const struct sockaddr *) &address.sock, Server::onConnect)) {
             // Error
         }
     }
@@ -129,14 +124,38 @@ namespace http {
 
 
 namespace http {
+    void Server::onAddress(uv_getaddrinfo_t * getaddrinfo, int status, struct addrinfo * addrinfo) {
+        if (status) {
+            // Error
+            return;
+        }
+
+        DNSLookup * dns = (DNSLookup *) getaddrinfo->data;
+
+        if (addrinfo != nullptr) {
+            if (addrinfo->ai_addr->sa_family == PF_INET) {
+                memcpy(&dns->address.sock, addrinfo->ai_addr, sizeof(struct sockaddr_in));
+            } else if (addrinfo->ai_addr->sa_family == PF_INET6) {
+                memcpy(&dns->address.sock, addrinfo->ai_addr, sizeof(struct sockaddr_in6));
+            } else {
+                memset(&dns->address.sock, 0, sizeof(Address));
+            }
+        } else {
+            memset(&dns->address.sock, 0, sizeof(Address));
+        }
+
+        dns->callback(*dns->server, dns->address);
+        delete dns;
+    }
+
     void Server::allocBuffer(uv_handle_t * handle, size_t suggestedSize, uv_buf_t * buffer) {
         buffer->base = (char *) malloc(suggestedSize);
         buffer->len = suggestedSize;
     }
 
     void Server::close(uv_handle_t * handle) {
-        Client * client = (Client *) handle->data;
-        delete client;
+        Connection * conn = (Connection *) handle->data;
+        delete conn;
     }
 
     void Server::shutdown(uv_shutdown_t * shutdown, int status) {
@@ -149,31 +168,31 @@ namespace http {
             return;
         }
 
-        Client * client = new Client(stream->loop, (Server *) stream->data);
+        Connection * conn = new Connection(stream->loop, (Server *) stream->data);
 
-        if (uv_accept(stream, (uv_stream_t *) &client->tcp)) {
-            if (uv_shutdown(&client->shutdown, (uv_stream_t *) &client->tcp, Server::shutdown)) {
+        if (uv_accept(stream, (uv_stream_t *) &conn->tcp)) {
+            if (uv_shutdown(&conn->shutdown, (uv_stream_t *) &conn->tcp, Server::shutdown)) {
                 // Error
                 return;
             }
         }
 
-        if (uv_read_start((uv_stream_t *) &client->tcp, Server::allocBuffer, Server::onRequestRead)) {
+        if (uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onRequestRead)) {
             // Error
             return;
         }
     }
 
     void Server::onRequestRead(uv_stream_t * stream, ssize_t nread, const uv_buf_t * buffer) {
-        Client * client = (Client *) stream->data;
+        Connection * conn = (Connection *) stream->data;
 
         if (nread >= 0) {
-            if (client->req.parse(buffer, nread)) {
-                client->server->httpRequestHandler(*client->server, client->req, client->res);
+            if (conn->req.parse(buffer, nread)) {
+                conn->server->httpRequestHandler(*conn->server, conn->req, conn->res);
 
-                uv_buf_t resBuffer = client->res.end();
-                client->write.data = resBuffer.base;
-                uv_write(&client->write, stream, &resBuffer, 1, Server::onResponseWrite);
+                uv_buf_t resBuffer = conn->res.end();
+                conn->write.data = resBuffer.base;
+                uv_write(&conn->write, stream, &resBuffer, 1, Server::onResponseWrite);
             }
         } else {
             if (nread == UV_EOF) {
@@ -182,7 +201,7 @@ namespace http {
                 // printf("read: %s\n", uv_strerror(nread));
             }
 
-            if (uv_shutdown(&client->shutdown, stream, Server::shutdown)) {
+            if (uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
                 // Error
             }
         }
@@ -202,15 +221,15 @@ namespace http {
             return;
         }
 
-        Client * client = (Client *) connect->data;
-        if (uv_read_start((uv_stream_t *) &client->tcp, Server::allocBuffer, Server::onResponseRead)) {
+        Connection * conn = (Connection *) connect->data;
+        if (uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onResponseRead)) {
             // Error
             return;
         }
 
-        const uv_buf_t buffer = client->req.end();
-        client->write.data = buffer.base;
-        if (uv_write(&client->write, (uv_stream_t *) &client->tcp, &buffer, 1, Server::onRequestWrite)) {
+        const uv_buf_t buffer = conn->req.end();
+        conn->write.data = buffer.base;
+        if (uv_write(&conn->write, (uv_stream_t *) &conn->tcp, &buffer, 1, Server::onRequestWrite)) {
             // Error
             return;
         }
@@ -221,11 +240,11 @@ namespace http {
     }
 
     void Server::onResponseRead(uv_stream_t * stream, ssize_t nread, const uv_buf_t * buffer) {
-        Client * client = (Client *) stream->data;
+        Connection * conn = (Connection *) stream->data;
 
         if (nread >= 0) {
-            if (client->res.parse(buffer, nread)) {
-                client->callback(*client->server, client->req, client->res);
+            if (conn->res.parse(buffer, nread)) {
+                conn->callback(*conn->server, conn->req, conn->res);
             }
         } else {
             if (nread == UV_EOF) {
@@ -235,7 +254,7 @@ namespace http {
             }
         }
 
-        if (uv_shutdown(&client->shutdown, stream, Server::shutdown)) {
+        if (uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
             // Error
         }
 

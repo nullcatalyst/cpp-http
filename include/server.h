@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <uv.h>
 
+#include "./address.h"
 #include "./request.h"
 #include "./response.h"
 
@@ -13,7 +14,7 @@ namespace http {
     public:
         using HttpRequestHandler = std::function<void (Server & server, Request & req, Response & res)>;
         using HttpResponseHandler = std::function<void (Server & server, Request & req, Response & res)>;
-        using AddressHandler = std::function<void (Server & server, uv_getaddrinfo_t)>;
+        using AddressHandler = std::function<void (Server & server, Address & address)>;
 
     private:
         uv_loop_t * loop;
@@ -25,6 +26,8 @@ namespace http {
         std::condition_variable cv;
 
         HttpRequestHandler httpRequestHandler;
+
+        static void onAddress(uv_getaddrinfo_t * req, int status, struct addrinfo * res);
 
         static void allocBuffer(uv_handle_t * handle, size_t suggestedSize, uv_buf_t * buffer);
         static void close(uv_handle_t * handle);
@@ -43,16 +46,12 @@ namespace http {
         Server(uv_loop_t * loop);
         ~Server();
 
-        void getAddress(const std::string & address, const AddressHandler & addresshandler);
+        void makeDNSLookup(const std::string & domainName, const AddressHandler & callback);
+
+        void makeRequest(const Address & address, const Request & req, const HttpResponseHandler & callback);
 
         void onHttpRequest(const HttpRequestHandler & callback) { this->httpRequestHandler = callback; }
-
-
-        void makeRequest(sockaddr * address, const Request & req, const HttpResponseHandler & callback);
-        // void makeRequestToDomain(const char * domain, uint16_t port, const Request & request);
-
         bool listen(uint16_t port);
-
 
         void run();
 

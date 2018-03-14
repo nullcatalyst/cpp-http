@@ -1,7 +1,7 @@
-#include "connection.h"
+#include "message.h"
 
 namespace http {
-    icu::UnicodeString Connection::getHeader(const icu::UnicodeString & key) {
+    icu::UnicodeString Message::getHeader(const icu::UnicodeString & key) {
         auto it = headers.find(key);
         if (it != headers.end()) {
             return it->second;
@@ -10,11 +10,11 @@ namespace http {
         }
     }
 
-    void Connection::addHeader(const icu::UnicodeString & key, const icu::UnicodeString & value) {
+    void Message::addHeader(const icu::UnicodeString & key, const icu::UnicodeString & value) {
         headers.emplace(key, value);
     }
 
-    void Connection::removeHeader(const icu::UnicodeString & key) {
+    void Message::removeHeader(const icu::UnicodeString & key) {
         auto it = headers.find(key);
         if (it != headers.end()) {
             headers.erase(it);
