@@ -11,7 +11,7 @@ namespace http {
         icu::UnicodeString body;
 
     public:
-        Response() = default;
+        Response() : status(Status::OK) {}
 
         Status getStatus() const { return status; }
         void setStatus(Status status) { this->status = status; }
@@ -19,6 +19,7 @@ namespace http {
         const icu::UnicodeString & getBody() const { return body; }
         void setBody(const icu::UnicodeString & body) { this->body = body; }
         void write(const icu::UnicodeString & content) { this->body += content; }
+        void clear() { this->body = icu::UnicodeString(); }
 
         /**
          * Parse the buffer representing an HTTP response.

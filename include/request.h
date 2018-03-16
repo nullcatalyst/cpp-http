@@ -23,6 +23,7 @@ namespace http {
         const icu::UnicodeString & getBody() const { return body; }
         void setBody(const icu::UnicodeString & body) { this->body = body; }
         void write(const icu::UnicodeString & content) { this->body += content; }
+        void clear() { this->body = icu::UnicodeString(); }
 
         /**
          * Parse the buffer representing an HTTP request.

@@ -96,9 +96,13 @@ namespace http {
     }
 
     void Router::operator () (Request & req, Response & res) const {
+#if __cpp_exceptions >= 199711
+        try {
+#endif
         const int method = int(req.getMethod());
         if (method < 0 || method >= int(Method::Count)) {
             // Check if this is a valid method that this router can handle
+            res.setStatus(Status::NotFound);
             return notFoundCallback(req, res);
         }
 
@@ -109,10 +113,17 @@ namespace http {
             if (it != currRoute->routes.end()) {
                 currRoute = &it->second;
             } else {
+                res.setStatus(Status::NotFound);
                 return notFoundCallback(req, res);
             }
         }
 
         return currRoute->methods[method](req, res);
+#if __cpp_exceptions >= 199711
+        } catch (const std::exception & error) {
+            res.setStatus(Status::InternalServerError);
+            return errorCallback(error, req, res);
+        }
+#endif
     }
 }

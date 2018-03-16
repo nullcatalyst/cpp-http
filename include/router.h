@@ -1,5 +1,9 @@
 #pragma once
 
+#if __cpp_exceptions >= 199711
+#include <exception>
+#endif
+
 #include <functional>
 #include <unordered_map>
 
@@ -11,8 +15,8 @@
 namespace http {
     class Router {
     public:
-        // using HttpResponseCallback = Server::HttpResponseCallback;
         using HttpResponseCallback = std::function<void (Request & req, Response & res)>;
+        using HttpErrorCallback = std::function<void (const std::exception & error, Request & req, Response & res)>;
         using WildcardRouteCallback = std::function<void (const icu::UnicodeString & token, Request & req, Response & res)>;
 
     private:
@@ -41,6 +45,14 @@ namespace http {
          */
         HttpResponseCallback notFoundCallback;
 
+#if __cpp_exceptions >= 199711
+        /**
+         * The ultimate destination of any route if an uncaught exception is thrown.
+         * Typically this is the 500 page.
+         */
+        HttpErrorCallback errorCallback;
+#endif
+
         /**
          * The base route for this router.
          */
@@ -51,6 +63,13 @@ namespace http {
             this->notFoundCallback = callback;
             return *this;
         }
+
+#if __cpp_exceptions >= 199711
+        Router & error(const HttpErrorCallback & callback) {
+            this->errorCallback = callback;
+            return *this;
+        }
+#endif
 
         Router & handle(Method method, const icu::UnicodeString & path, const HttpResponseCallback & callback);
         Router & get(const icu::UnicodeString & url, const HttpResponseCallback & callback) { return handle(Method::Get, url, callback); }
