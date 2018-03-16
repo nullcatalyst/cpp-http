@@ -2,6 +2,7 @@
 
 #include <cstdlib> // malloc, free
 
+#include "error.h"
 #include "request.h"
 #include "response.h"
 
@@ -44,11 +45,13 @@ namespace {
 
 
 namespace http {
-    Server::Server() : loop(uv_default_loop()) {}
+    Server::Server() {
+        uv_loop_init(&loop);
+    }
 
-    Server::Server(uv_loop_t * loop) : loop(loop) {}
-
-    Server::~Server() {}
+    Server::~Server() {
+        uv_loop_close(&loop);
+    }
 
     void Server::makeDNSLookup(const std::string & name, const DNSLookupCallback & callback) {
         struct addrinfo hints;
@@ -58,44 +61,44 @@ namespace http {
         hints.ai_flags = 0;
 
         DNSLookup * dns = new DNSLookup(this, callback);
-        if (uv_getaddrinfo(loop, &dns->getaddrinfo, Server::onAddress, name.c_str(), nullptr, &hints)) {
-            // Error
+        if (int err = uv_getaddrinfo(&loop, &dns->getaddrinfo, Server::onAddress, name.c_str(), nullptr, &hints)) {
+            ERROR("%s", uv_strerror(err));
         }
     }
 
     void Server::makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback) {
-        Connection * conn = new Connection(loop, this);
+        Connection * conn = new Connection(&loop, this);
         conn->req = req;
         conn->callback = callback;
 
         conn->connect.data = conn;
 
-        if (uv_tcp_connect(&conn->connect, &conn->tcp, (const struct sockaddr *) &address.sock, Server::onConnect)) {
-            // Error
+        if (int err = uv_tcp_connect(&conn->connect, &conn->tcp, (const struct sockaddr *) &address.sock, Server::onConnect)) {
+            ERROR("%s", uv_strerror(err));
         }
     }
 
     bool Server::listen(uint16_t port) {
-        if (uv_tcp_init(loop, &tcp)) {
-            // Error
+        if (int err = uv_tcp_init(&loop, &tcp)) {
+            ERROR("%s", uv_strerror(err));
             return false;
         }
         tcp.data = this;
 
         struct sockaddr_in address;
-        if (uv_ip4_addr("0.0.0.0", port, &address)) {
-            // Error
+        if (int err = uv_ip4_addr("0.0.0.0", port, &address)) {
+            ERROR("%s", uv_strerror(err));
             return false;
         }
         this->port = address.sin_port;
 
-        if (uv_tcp_bind(&tcp, (struct sockaddr *) &address, 0)) {
-            // Error
+        if (int err = uv_tcp_bind(&tcp, (struct sockaddr *) &address, 0)) {
+            ERROR("%s", uv_strerror(err));
             return false;
         }
 
-        if (uv_listen((uv_stream_t *) &tcp, 128, Server::onConnection)) {
-            // Error
+        if (int err = uv_listen((uv_stream_t *) &tcp, 128, Server::onConnection)) {
+            ERROR("%s", uv_strerror(err));
             return false;
         }
 
@@ -103,8 +106,8 @@ namespace http {
     }
 
     void Server::run() {
-        if (uv_run(loop, UV_RUN_DEFAULT)) {
-            // Error
+        if (int err = uv_run(&loop, UV_RUN_DEFAULT)) {
+            ERROR("%s", uv_strerror(err));
         }
 
         running = false;
@@ -113,7 +116,7 @@ namespace http {
 
     void Server::close() {
         if (running) {
-            uv_stop(loop);
+            uv_stop(&loop);
 
             std::unique_lock<std::mutex> lock(mutex);
             cv.wait(lock, [this] { return !running; });
@@ -171,14 +174,14 @@ namespace http {
         Connection * conn = new Connection(stream->loop, (Server *) stream->data);
 
         if (uv_accept(stream, (uv_stream_t *) &conn->tcp)) {
-            if (uv_shutdown(&conn->shutdown, (uv_stream_t *) &conn->tcp, Server::shutdown)) {
-                // Error
+            if (int err = uv_shutdown(&conn->shutdown, (uv_stream_t *) &conn->tcp, Server::shutdown)) {
+                ERROR("%s", uv_strerror(err));
                 return;
             }
         }
 
-        if (uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onRequestRead)) {
-            // Error
+        if (int err = uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onRequestRead)) {
+            ERROR("%s", uv_strerror(err));
             return;
         }
     }
@@ -201,8 +204,8 @@ namespace http {
                 // printf("read: %s\n", uv_strerror(nread));
             }
 
-            if (uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
-                // Error
+            if (int err = uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
+                ERROR("%s", uv_strerror(err));
             }
         }
 
@@ -217,20 +220,20 @@ namespace http {
 
     void Server::onConnect(uv_connect_t * connect, int status) {
         if (status) {
-            // Error
+            /// TODO: Error
             return;
         }
 
         Connection * conn = (Connection *) connect->data;
-        if (uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onResponseRead)) {
-            // Error
+        if (int err = uv_read_start((uv_stream_t *) &conn->tcp, Server::allocBuffer, Server::onResponseRead)) {
+            ERROR("%s", uv_strerror(err));
             return;
         }
 
         const uv_buf_t buffer = conn->req.end();
         conn->write.data = buffer.base;
-        if (uv_write(&conn->write, (uv_stream_t *) &conn->tcp, &buffer, 1, Server::onRequestWrite)) {
-            // Error
+        if (int err = uv_write(&conn->write, (uv_stream_t *) &conn->tcp, &buffer, 1, Server::onRequestWrite)) {
+            ERROR("%s", uv_strerror(err));
             return;
         }
     }
@@ -250,12 +253,12 @@ namespace http {
             if (nread == UV_EOF) {
                 // do nothing
             } else {
-                // printf("read: %s\n", uv_strerror(nread));
+                ERROR("%s", uv_strerror(nread));
             }
         }
 
-        if (uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
-            // Error
+        if (int err = uv_shutdown(&conn->shutdown, stream, Server::shutdown)) {
+            ERROR("%s", uv_strerror(err));
         }
 
         // Deallocate the buffer memory

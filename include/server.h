@@ -17,7 +17,7 @@ namespace http {
         using DNSLookupCallback     = std::function<void (Address & address)>;
 
     private:
-        uv_loop_t * loop;
+        uv_loop_t loop;
         uv_tcp_t tcp;
         uint16_t port;
 
@@ -43,7 +43,6 @@ namespace http {
 
     public:
         Server();
-        Server(uv_loop_t * loop);
         ~Server();
 
         void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
