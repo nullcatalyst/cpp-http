@@ -4,7 +4,7 @@
 
 namespace http {
 #define HTTP_STATUS_MAP(XX)                                                     \
-    XX(0,   Unknown,                        Unknown)                            \
+    XX(-1,  Unknown,                        Unknown)                            \
     XX(100, Continue,                       Continue)                           \
     XX(101, SwitchingProtocols,             Switching Protocols)                \
     XX(200, OK,                             OK)                                 \
@@ -52,7 +52,7 @@ namespace http {
     XX(505, HTTPVersionNotSupported,        HTTP Version Not Supported)         \
     XX(511, NetworkAuthenticationRequired,  Network Authentication Required)    \
 
-    enum class Status : uint32_t {
+    enum class Status {
 #define XX(num, name, string) name = num,
         HTTP_STATUS_MAP(XX)
 #undef XX

@@ -4,17 +4,18 @@
 
 namespace http {
 #define HTTP_METHOD_MAP(XX)         \
-    XX(0,   Unknown,    UNKNOWN)    \
-    XX(1,   Delete,     DELETE)     \
-    XX(2,   Get,        GET)        \
-    XX(3,   Head,       HEAD)       \
-    XX(4,   Post,       POST)       \
-    XX(5,   Put,        PUT)
+    XX(-1,  Unknown,    UNKNOWN)    \
+    XX(0,   Get,        GET)        \
+    XX(1,   Post,       POST)       \
+    XX(2,   Delete,     DELETE)     \
+    XX(3,   Put,        PUT)        \
+    XX(4,   Head,       HEAD)
 
-    enum class Method : uint32_t {
+    enum class Method {
 #define XX(num, name, string) name = num,
         HTTP_METHOD_MAP(XX)
 #undef XX
+        Count,
     };
 
     inline const char * getMethodString(Method method) {

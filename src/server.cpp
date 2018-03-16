@@ -10,9 +10,9 @@ namespace {
         uv_getaddrinfo_t getaddrinfo;
         http::Server * server;
         http::Address address;
-        http::Server::AddressHandler callback;
+        http::Server::DNSLookupCallback callback;
 
-        DNSLookup(http::Server * server, const http::Server::AddressHandler & callback) : server(server), callback(callback) {
+        DNSLookup(http::Server * server, const http::Server::DNSLookupCallback & callback) : server(server), callback(callback) {
             getaddrinfo.data = this;
         }
     };
@@ -29,7 +29,7 @@ namespace {
         http::Server * server;
         http::Request req;
         http::Response res;
-        http::Server::HttpResponseHandler callback;
+        http::Server::HttpResponseCallback callback;
 
         Connection(uv_loop_t * loop, http::Server * server) : write{0}, server(server) {
             if (uv_tcp_init(loop, &tcp)) {
@@ -50,7 +50,7 @@ namespace http {
 
     Server::~Server() {}
 
-    void Server::makeDNSLookup(const std::string & name, const AddressHandler & callback) {
+    void Server::makeDNSLookup(const std::string & name, const DNSLookupCallback & callback) {
         struct addrinfo hints;
         hints.ai_family = PF_INET;
         hints.ai_socktype = SOCK_STREAM;
@@ -63,7 +63,7 @@ namespace http {
         }
     }
 
-    void Server::makeRequest(const Address & address, const Request & req, const HttpResponseHandler & callback) {
+    void Server::makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback) {
         Connection * conn = new Connection(loop, this);
         conn->req = req;
         conn->callback = callback;
@@ -144,7 +144,7 @@ namespace http {
             memset(&dns->address.sock, 0, sizeof(Address));
         }
 
-        dns->callback(*dns->server, dns->address);
+        dns->callback(dns->address);
         delete dns;
     }
 
@@ -188,7 +188,7 @@ namespace http {
 
         if (nread >= 0) {
             if (conn->req.parse(buffer, nread)) {
-                conn->server->httpRequestHandler(*conn->server, conn->req, conn->res);
+                conn->server->httpRequestCallback(conn->req, conn->res);
 
                 uv_buf_t resBuffer = conn->res.end();
                 conn->write.data = resBuffer.base;
@@ -244,7 +244,7 @@ namespace http {
 
         if (nread >= 0) {
             if (conn->res.parse(buffer, nread)) {
-                conn->callback(*conn->server, conn->req, conn->res);
+                conn->callback(conn->req, conn->res);
             }
         } else {
             if (nread == UV_EOF) {

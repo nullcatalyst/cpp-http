@@ -12,9 +12,9 @@
 namespace http {
     class Server {
     public:
-        using HttpRequestHandler = std::function<void (Server & server, Request & req, Response & res)>;
-        using HttpResponseHandler = std::function<void (Server & server, Request & req, Response & res)>;
-        using AddressHandler = std::function<void (Server & server, Address & address)>;
+        using HttpRequestCallback   = std::function<void (Request & req, Response & res)>;
+        using HttpResponseCallback  = std::function<void (Request & req, Response & res)>;
+        using DNSLookupCallback     = std::function<void (Address & address)>;
 
     private:
         uv_loop_t * loop;
@@ -25,7 +25,7 @@ namespace http {
         std::mutex mutex;
         std::condition_variable cv;
 
-        HttpRequestHandler httpRequestHandler;
+        HttpRequestCallback httpRequestCallback;
 
         static void onAddress(uv_getaddrinfo_t * req, int status, struct addrinfo * res);
 
@@ -46,11 +46,11 @@ namespace http {
         Server(uv_loop_t * loop);
         ~Server();
 
-        void makeDNSLookup(const std::string & domainName, const AddressHandler & callback);
+        void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
 
-        void makeRequest(const Address & address, const Request & req, const HttpResponseHandler & callback);
+        void makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback);
 
-        void onHttpRequest(const HttpRequestHandler & callback) { this->httpRequestHandler = callback; }
+        void onHttpRequest(const HttpRequestCallback & callback) { this->httpRequestCallback = callback; }
         bool listen(uint16_t port);
 
         void run();

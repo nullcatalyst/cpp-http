@@ -20,6 +20,7 @@ PRIVATE
     src/message.cpp
     src/request.cpp
     src/response.cpp
+    src/router.cpp
     src/server.cpp
 
     src/http-parser/http_parser.c
