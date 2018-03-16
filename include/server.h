@@ -45,12 +45,25 @@ namespace http {
         Server();
         ~Server();
 
-        void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
+        /**
+         * Libuv owns the socket. DO NOT BREAK IT.
+         * This exists as a method of sharing a socket between threads.
+         */
+        uv_os_sock_t getSocket() const {
+#ifdef _WIN32
+            return tcp.socket;
+#else
+            return tcp.io_watcher.fd;
+#endif
+        }
 
+        void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
         void makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback);
 
         void onHttpRequest(const HttpRequestCallback & callback) { this->httpRequestCallback = callback; }
+
         bool listen(uint16_t port);
+        bool reuseSocket(uv_os_sock_t sock);
 
         void run();
 

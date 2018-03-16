@@ -105,6 +105,38 @@ namespace http {
         return true;
     }
 
+    bool Server::reuseSocket(uv_os_sock_t sock) {
+        if (int err = uv_tcp_init(&loop, &tcp)) {
+            ERROR("%s", uv_strerror(err));
+            return false;
+        }
+        tcp.data = this;
+
+        // struct sockaddr_in address;
+        // if (int err = uv_ip4_addr("0.0.0.0", port, &address)) {
+        //     ERROR("%s", uv_strerror(err));
+        //     return false;
+        // }
+        // this->port = address.sin_port;
+
+        // if (int err = uv_tcp_bind(&tcp, (struct sockaddr *) &address, 0)) {
+        //     ERROR("%s", uv_strerror(err));
+        //     return false;
+        // }
+
+        if (int err = uv_tcp_open(&tcp, sock)) {
+            ERROR("%s", uv_strerror(err));
+            return false;
+        }
+
+        if (int err = uv_listen((uv_stream_t *) &tcp, 128, Server::onConnection)) {
+            ERROR("%s", uv_strerror(err));
+            return false;
+        }
+
+        return true;
+    }
+
     void Server::run() {
         if (int err = uv_run(&loop, UV_RUN_DEFAULT)) {
             ERROR("%s", uv_strerror(err));
