@@ -59,6 +59,8 @@ namespace http {
         Route route;
 
     public:
+        Router();
+
         Router & notFound(const HttpResponseCallback & callback) {
             this->notFoundCallback = callback;
             return *this;

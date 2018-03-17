@@ -21,5 +21,8 @@ namespace http {
         bool isIPv6() const { return sock.ss_family == AF_INET6; }
 
         std::string toString() const;
+
+        bool operator == (const Address & other) const;
+        bool operator != (const Address & other) const;
     };
 }

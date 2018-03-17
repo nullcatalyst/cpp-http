@@ -25,4 +25,28 @@ namespace http {
         char buffer[INET6_ADDRSTRLEN];
         return inet_ntop(sock.ss_family, &((struct sockaddr_in *) &sock)->sin_addr, buffer, INET6_ADDRSTRLEN);
     }
+
+    bool Address::operator == (const Address & other) const {
+        if (sock.ss_family == other.sock.ss_family) {
+            if (isIPv4()) {
+                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in)) == 0;
+            } else if (isIPv6()) {
+                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in6)) == 0;
+            }
+        }
+
+        return false;
+    }
+
+    bool Address::operator != (const Address & other) const {
+        if (sock.ss_family == other.sock.ss_family) {
+            if (isIPv4()) {
+                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in)) != 0;
+            } else if (isIPv6()) {
+                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in6)) != 0;
+            }
+        }
+
+        return true;
+    }
 }

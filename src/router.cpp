@@ -77,6 +77,17 @@ namespace {
 }
 
 namespace http {
+    Router::Router() {
+        error([] (const std::exception & error, http::Request & req, http::Response & res) {
+            res.clear();
+            res.write("500 Internal Server Error");
+        });
+
+        notFound([] (http::Request & req, http::Response & res) {
+            res.write("404 Not Found");
+        });
+    }
+
     Router & Router::handle(Method method, const icu::UnicodeString & url, const HttpResponseCallback & callback) {
         Route * currRoute = &route;
 
@@ -99,26 +110,26 @@ namespace http {
 #if __cpp_exceptions >= 199711
         try {
 #endif
-        const int method = int(req.getMethod());
-        if (method < 0 || method >= int(Method::Count)) {
-            // Check if this is a valid method that this router can handle
-            res.setStatus(Status::NotFound);
-            return notFoundCallback(req, res);
-        }
-
-        const Route * currRoute = &route;
-
-        for (const icu::UnicodeString & path : URLIterator(req.getUrl())) {
-            auto it = currRoute->routes.find(path);
-            if (it != currRoute->routes.end()) {
-                currRoute = &it->second;
-            } else {
+            const int method = int(req.getMethod());
+            if (method < 0 || method >= int(Method::Count)) {
+                // Check if this is a valid method that this router can handle
                 res.setStatus(Status::NotFound);
                 return notFoundCallback(req, res);
             }
-        }
 
-        return currRoute->methods[method](req, res);
+            const Route * currRoute = &route;
+
+            for (const icu::UnicodeString & path : URLIterator(req.getUrl())) {
+                auto it = currRoute->routes.find(path);
+                if (it != currRoute->routes.end()) {
+                    currRoute = &it->second;
+                } else {
+                    res.setStatus(Status::NotFound);
+                    return notFoundCallback(req, res);
+                }
+            }
+
+            return currRoute->methods[method](req, res);
 #if __cpp_exceptions >= 199711
         } catch (const std::exception & error) {
             res.setStatus(Status::InternalServerError);

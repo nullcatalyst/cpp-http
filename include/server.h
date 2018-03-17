@@ -1,8 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <mutex>
-#include <condition_variable>
 #include <uv.h>
 
 #include "./address.h"
@@ -19,11 +17,8 @@ namespace http {
     private:
         uv_loop_t loop;
         uv_tcp_t tcp;
-        uint16_t port;
 
         std::atomic<bool> running;
-        std::mutex mutex;
-        std::condition_variable cv;
 
         HttpRequestCallback httpRequestCallback;
 
@@ -45,25 +40,13 @@ namespace http {
         Server();
         ~Server();
 
-        /**
-         * Libuv owns the socket. DO NOT BREAK IT.
-         * This exists as a method of sharing a socket between threads.
-         */
-        uv_os_sock_t getSocket() const {
-#ifdef _WIN32
-            return tcp.socket;
-#else
-            return tcp.io_watcher.fd;
-#endif
-        }
-
         void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
         void makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback);
 
         void onHttpRequest(const HttpRequestCallback & callback) { this->httpRequestCallback = callback; }
 
         bool listen(uint16_t port);
-        bool reuseSocket(uv_os_sock_t sock);
+        bool reuseSocket(Server & server);
 
         void run();
 
