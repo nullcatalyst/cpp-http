@@ -67,14 +67,14 @@ namespace http {
         }
     }
 
-    void Server::makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback) {
+    void Server::makeRequest(const Request & req, const HttpResponseCallback & callback) {
         Connection * conn = new Connection(&loop, this);
         conn->req = req;
         conn->callback = callback;
 
         conn->connect.data = conn;
 
-        if (int err = uv_tcp_connect(&conn->connect, &conn->tcp, (const struct sockaddr *) &address.sock, Server::onConnect)) {
+        if (int err = uv_tcp_connect(&conn->connect, &conn->tcp, (const struct sockaddr *) &req.address.sock, Server::onConnect)) {
             ERROR("%s", uv_strerror(err));
         }
     }
@@ -229,6 +229,11 @@ namespace http {
 
         if (nread >= 0) {
             if (conn->req.parse(buffer, nread)) {
+                int socklen = sizeof(struct sockaddr_storage);
+                if (int err = uv_tcp_getpeername((const uv_tcp_t *) stream, (struct sockaddr *) &conn->req.address.sock, &socklen)) {
+                    ERROR("%s", uv_strerror(err));
+                }
+
                 conn->server->httpRequestCallback(conn->req, conn->res);
 
                 uv_buf_t resBuffer = conn->res.end();

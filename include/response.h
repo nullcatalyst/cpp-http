@@ -10,6 +10,8 @@ namespace http {
         Status status;
         icu::UnicodeString body;
 
+        friend class Server;
+
     public:
         Response() : status(Status::OK) {}
 

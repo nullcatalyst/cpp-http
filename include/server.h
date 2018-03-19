@@ -41,7 +41,7 @@ namespace http {
         ~Server();
 
         void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
-        void makeRequest(const Address & address, const Request & req, const HttpResponseCallback & callback);
+        void makeRequest(const Request & req, const HttpResponseCallback & callback);
 
         void onHttpRequest(const HttpRequestCallback & callback) { this->httpRequestCallback = callback; }
 
