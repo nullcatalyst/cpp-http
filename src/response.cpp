@@ -1,5 +1,6 @@
 #include "response.h"
 
+#include <cstring> // memcpy
 #include <sstream>
 #include <unicode/ustream.h>
 
@@ -44,7 +45,7 @@ namespace {
             http::Response * res = (http::Response *) parser->data;
 
             if (at != nullptr && res != nullptr && (int) len > -1) {
-                res->setBody(http::convertRawToUnicode(at, len));
+                res->getBody() << http::convertRawToUnicode(at, len);
             }
 
             return 0;
@@ -57,6 +58,11 @@ namespace {
 }
 
 namespace http {
+    void Response::clear() {
+        body.str(std::string());
+        body.clear();
+    }
+
     bool Response::parse(const uv_buf_t * buffer, ssize_t nread) {
         http_parser_state parser;
         http_parser_init(&parser, HTTP_RESPONSE);
@@ -72,11 +78,13 @@ namespace http {
         return true;
     }
 
-    uv_buf_t Response::end() const {
+    uv_buf_t Response::end() {
         std::stringstream sstream;
 
         sstream << "HTTP/1.1 " << int(status) << " " << getStatusString(status) << "\r\n";
 
+        const std::string body = this->body.str();
+        addHeader("Content-Length", http::convertStringToUnicode(std::to_string(body.length())));
         for (auto it : headers) {
             sstream << it.first << ": " << it.second << "\r\n";
         }

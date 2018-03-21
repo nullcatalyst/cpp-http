@@ -1,5 +1,7 @@
 #include "address.h"
 
+#include <cstring> // memcmp
+
 namespace http {
     Address Address::fromIPv4(const std::string & ip4, uint16_t port) {
         Address address;
@@ -29,9 +31,9 @@ namespace http {
     bool Address::operator == (const Address & other) const {
         if (sock.ss_family == other.sock.ss_family) {
             if (isIPv4()) {
-                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in)) == 0;
+                return memcmp(&((struct sockaddr_in *) &sock)->sin_addr, &((struct sockaddr_in *) &other.sock)->sin_addr, sizeof(struct in_addr)) == 0;
             } else if (isIPv6()) {
-                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in6)) == 0;
+                return memcmp(&((struct sockaddr_in6 *) &sock)->sin6_addr, &((struct sockaddr_in6 *) &other.sock)->sin6_addr, sizeof(struct in6_addr)) == 0;
             }
         }
 
@@ -41,9 +43,9 @@ namespace http {
     bool Address::operator != (const Address & other) const {
         if (sock.ss_family == other.sock.ss_family) {
             if (isIPv4()) {
-                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in)) != 0;
+                return memcmp(&((struct sockaddr_in *) &sock)->sin_addr, &((struct sockaddr_in *) &other.sock)->sin_addr, sizeof(struct in_addr)) != 0;
             } else if (isIPv6()) {
-                return memcmp(&sock, &other.sock, sizeof(struct sockaddr_in6)) != 0;
+                return memcmp(&((struct sockaddr_in6 *) &sock)->sin6_addr, &((struct sockaddr_in6 *) &other.sock)->sin6_addr, sizeof(struct in6_addr)) != 0;
             }
         }
 

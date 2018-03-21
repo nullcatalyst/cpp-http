@@ -1,5 +1,6 @@
 #include "request.h"
 
+#include <cstring> // memcpy
 #include <sstream>
 #include <unicode/ustream.h>
 
@@ -45,14 +46,17 @@ namespace {
         .on_headers_complete = [] (http_parser * parser) -> int {
             http::Method method;
             switch ((enum http_method) parser->method) {
-                case HTTP_DELETE:       method = http::Method::Delete;  break;
                 case HTTP_GET:          method = http::Method::Get;     break;
-                case HTTP_HEAD:         method = http::Method::Head;    break;
                 case HTTP_POST:         method = http::Method::Post;    break;
+                case HTTP_DELETE:       method = http::Method::Delete;  break;
                 case HTTP_PUT:          method = http::Method::Put;     break;
+                case HTTP_HEAD:         method = http::Method::Head;    break;
+                case HTTP_OPTIONS:      method = http::Method::Options; break;
                 default:                method = http::Method::Unknown; break;
             }
 
+            http::Request * req = (http::Request *) parser->data;
+            req->setMethod(method);
             return 0;
         },
 
@@ -60,7 +64,7 @@ namespace {
             http::Request * req = (http::Request *) parser->data;
 
             if (at != nullptr && req != nullptr && (int) len > -1) {
-                req->setBody(http::convertRawToUnicode(at, len));
+                req->getBody() << http::convertRawToUnicode(at, len);
             }
 
             return 0;
@@ -77,6 +81,11 @@ namespace {
 namespace http {
     Request::Request() : method(Method::Get), url("/") {}
 
+    void Request::clear() {
+        body.str(std::string());
+        body.clear();
+    }
+
     bool Request::parse(const uv_buf_t * buffer, ssize_t nread) {
         http_parser_state parser;
         http_parser_init(&parser, HTTP_REQUEST);
@@ -92,11 +101,13 @@ namespace http {
         return true;
     }
 
-    uv_buf_t Request::end() const {
+    uv_buf_t Request::end() {
         std::stringstream sstream;
 
         sstream << getMethodString(method) << " " << url << " HTTP/1.1\r\n";
 
+        const std::string body = this->body.str();
+        addHeader("Content-Length", http::convertStringToUnicode(std::to_string(body.length())));
         for (auto it : headers) {
             sstream << it.first << ": " << it.second << "\r\n";
         }

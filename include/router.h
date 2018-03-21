@@ -30,7 +30,7 @@ namespace http {
             /**
              * The map of sub-paths reachable from this one.
              */
-            std::unordered_map<icu::UnicodeString, Route> routes;
+            std::unordered_map<icu::UnicodeString, Route *> routes;
 
             /**
              * A wildcard path, if the URL does not match any of the sub-paths.
@@ -73,9 +73,9 @@ namespace http {
         }
 #endif
 
-        Router & handle(Method method, const icu::UnicodeString & path, const HttpResponseCallback & callback);
-        Router & get(const icu::UnicodeString & url, const HttpResponseCallback & callback) { return handle(Method::Get, url, callback); }
-        Router & post(const icu::UnicodeString & url, const HttpResponseCallback & callback) { return handle(Method::Post, url, callback); }
+        Router & on(Method method, const icu::UnicodeString & path, const HttpResponseCallback & callback);
+        Router & get(const icu::UnicodeString & url, const HttpResponseCallback & callback) { return on(Method::Get, url, callback); }
+        Router & post(const icu::UnicodeString & url, const HttpResponseCallback & callback) { return on(Method::Post, url, callback); }
 
         void operator () (Request & req, Response & res) const;
     };

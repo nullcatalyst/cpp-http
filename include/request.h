@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sstream>
 #include <uv.h>
 
 #include "./method.h"
@@ -11,7 +12,7 @@ namespace http {
         Method method;
         Address address;
         icu::UnicodeString url;
-        icu::UnicodeString body;
+        std::stringstream body;
 
         friend class Server;
 
@@ -27,10 +28,8 @@ namespace http {
         const icu::UnicodeString & getUrl() const { return url; }
         void setUrl(const icu::UnicodeString & url) { this->url = url; }
 
-        const icu::UnicodeString & getBody() const { return body; }
-        void setBody(const icu::UnicodeString & body) { this->body = body; }
-        void write(const icu::UnicodeString & content) { this->body += content; }
-        void clear() { this->body = icu::UnicodeString(); }
+        std::stringstream & getBody() { return body; }
+        void clear();
 
         /**
          * Parse the buffer representing an HTTP request.
@@ -40,6 +39,6 @@ namespace http {
         /**
          * The caller is responsible for freeing the returned buffer.
          */
-        uv_buf_t end() const;
+        uv_buf_t end();
     };
 }

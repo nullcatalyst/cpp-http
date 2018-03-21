@@ -22,6 +22,8 @@ PRIVATE
     src/response.cpp
     src/router.cpp
     src/server.cpp
+    src/server-in.cpp
+    src/server-out.cpp
 
     src/http-parser/http_parser.c
 )

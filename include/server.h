@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <uv.h>
 
@@ -23,30 +24,31 @@ namespace http {
         HttpRequestCallback httpRequestCallback;
 
         static void onAddress(uv_getaddrinfo_t * req, int status, struct addrinfo * res);
-
         static void allocBuffer(uv_handle_t * handle, size_t suggestedSize, uv_buf_t * buffer);
-        static void close(uv_handle_t * handle);
-        static void shutdown(uv_shutdown_t * shutdown, int status);
 
-        static void onConnection(uv_stream_t * stream, int status);
-        static void onRequestRead(uv_stream_t * handle, ssize_t nread, const uv_buf_t * buffer);
-        static void onResponseWrite(uv_write_t * write, int status);
+        static void in_onConnect(uv_stream_t * stream, int status);
+        static void in_onRead(uv_stream_t * handle, ssize_t nread, const uv_buf_t * buffer);
+        static void in_onWrite(uv_write_t * write, int status);
+        static void in_onShutdown(uv_shutdown_t * shutdown, int status);
+        static void in_onClose(uv_handle_t * handle);
 
-        static void onConnect(uv_connect_t * connect, int status);
-        static void onRequestWrite(uv_write_t * write, int status);
-        static void onResponseRead(uv_stream_t * handle, ssize_t nread, const uv_buf_t * buffer);
+        static void out_onConnect(uv_connect_t * connect, int status);
+        static void out_onWrite(uv_write_t * write, int status);
+        static void out_onRead(uv_stream_t * handle, ssize_t nread, const uv_buf_t * buffer);
+        static void out_onShutdown(uv_shutdown_t * shutdown, int status);
+        static void out_onClose(uv_handle_t * handle);
 
     public:
         Server();
         ~Server();
 
         void makeDNSLookup(const std::string & domainName, const DNSLookupCallback & callback);
-        void makeRequest(const Request & req, const HttpResponseCallback & callback);
+        void makeRequest(Request && req, const HttpResponseCallback & callback);
 
         void onHttpRequest(const HttpRequestCallback & callback) { this->httpRequestCallback = callback; }
 
         bool listen(uint16_t port);
-        bool reuseSocket(Server & server);
+        bool reuseSocket(const Server & server);
 
         void run();
 

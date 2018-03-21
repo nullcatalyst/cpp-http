@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sstream>
 #include <uv.h>
 
 #include "./status.h"
@@ -8,7 +9,7 @@
 namespace http {
     class Response : public Message {
         Status status;
-        icu::UnicodeString body;
+        std::stringstream body;
 
         friend class Server;
 
@@ -18,10 +19,8 @@ namespace http {
         Status getStatus() const { return status; }
         void setStatus(Status status) { this->status = status; }
 
-        const icu::UnicodeString & getBody() const { return body; }
-        void setBody(const icu::UnicodeString & body) { this->body = body; }
-        void write(const icu::UnicodeString & content) { this->body += content; }
-        void clear() { this->body = icu::UnicodeString(); }
+        std::stringstream & getBody() { return body; }
+        void clear();
 
         /**
          * Parse the buffer representing an HTTP response.
@@ -31,6 +30,6 @@ namespace http {
         /**
          * The caller is responsible for freeing the returned buffer.
          */
-        uv_buf_t end() const;
+        uv_buf_t end();
     };
 }

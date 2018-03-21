@@ -9,7 +9,8 @@ namespace http {
     XX(1,   Post,       POST)       \
     XX(2,   Delete,     DELETE)     \
     XX(3,   Put,        PUT)        \
-    XX(4,   Head,       HEAD)
+    XX(4,   Head,       HEAD)       \
+    XX(5,   Options,    OPTIONS)
 
     enum class Method {
 #define XX(num, name, string) name = num,

@@ -14,6 +14,7 @@ namespace http {
         static Address fromIPv4(const std::string & ip4, uint16_t port);
         static Address fromIPv6(const std::string & ip6, uint16_t port);
 
+        // Luckily, the port is in the same location for both IPv4 and IPv6
         uint16_t getPort() const { return ntohs(((const struct sockaddr_in *) &sock)->sin_port); }
         void setPort(uint16_t port) { ((struct sockaddr_in *) &sock)->sin_port = ntohs(port); }
 
@@ -22,7 +23,16 @@ namespace http {
 
         std::string toString() const;
 
+        /**
+         * Compares the IP addresses against each other.
+         * This does not take the ports into account.
+         */
         bool operator == (const Address & other) const;
+
+        /**
+         * Compares the IP addresses against each other.
+         * This does not take the ports into account.
+         */
         bool operator != (const Address & other) const;
     };
 }

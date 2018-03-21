@@ -80,24 +80,24 @@ namespace http {
     Router::Router() {
         error([] (const std::exception & error, http::Request & req, http::Response & res) {
             res.clear();
-            res.write("500 Internal Server Error");
+            res.getBody() << "500 Internal Server Error";
         });
 
         notFound([] (http::Request & req, http::Response & res) {
-            res.write("404 Not Found");
+            res.getBody() << "404 Not Found";
         });
     }
 
-    Router & Router::handle(Method method, const icu::UnicodeString & url, const HttpResponseCallback & callback) {
+    Router & Router::on(Method method, const icu::UnicodeString & url, const HttpResponseCallback & callback) {
         Route * currRoute = &route;
 
         for (const icu::UnicodeString & path : URLIterator(url)) {
             auto it = currRoute->routes.find(path);
             if (it != currRoute->routes.end()) {
-                currRoute = &it->second;
+                currRoute = it->second;
             } else {
-                const auto [it, success] = currRoute->routes.emplace(icu::UnicodeString(path), Route());
-                currRoute = &it->second;
+                const auto [it, success] = currRoute->routes.emplace(icu::UnicodeString(path), new Route());
+                currRoute = it->second;
             }
         }
 
@@ -122,14 +122,19 @@ namespace http {
             for (const icu::UnicodeString & path : URLIterator(req.getUrl())) {
                 auto it = currRoute->routes.find(path);
                 if (it != currRoute->routes.end()) {
-                    currRoute = &it->second;
+                    currRoute = it->second;
                 } else {
                     res.setStatus(Status::NotFound);
                     return notFoundCallback(req, res);
                 }
             }
 
-            return currRoute->methods[method](req, res);
+            if (currRoute->methods[method]) {
+                return currRoute->methods[method](req, res);
+            } else {
+                res.setStatus(Status::NotFound);
+                return notFoundCallback(req, res);
+            }
 #if __cpp_exceptions >= 199711
         } catch (const std::exception & error) {
             res.setStatus(Status::InternalServerError);

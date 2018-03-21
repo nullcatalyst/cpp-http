@@ -19,9 +19,13 @@ namespace http {
         return icu::UnicodeString::fromUTF8(icu::StringPiece(at, len));
     }
 
+    inline icu::UnicodeString convertStringToUnicode(const std::string & s) {
+        return icu::UnicodeString::fromUTF8(s);
+    }
+
     inline std::string convertUnicodeToString(const icu::UnicodeString & u) {
         std::string s;
         u.toUTF8String(s);
         return s;
-    } 
+    }
 }
